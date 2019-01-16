@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>どこでもWairokuさん</title>
+  <style>
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: rgb(240, 199, 146);
+    }
+
+    #map {
+      height: 70%;
+      width: 70%;
+      margin: 0 auto;
+    }
+
+    #floating-panel {
+      font-size: 20px;
+      background-color: #fff;
+      border: 1px solid #999;
+      text-align: center;
+      font-family: 'Roboto', 'sans-serif';
+      line-height: 30px;
+      width: 200px;
+      margin: 20px auto;
+      display: none;
+    }
+
+
+    h1 {
+      text-align: center;
+      color: #fff;
+    }
+
+    #rule {
+      width: 600px;
+      margin: 0 auto;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    #link {
+      color: rgb(236, 174, 92);
+      text-align: right;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>どこでもWairoku</h1>
+  <div id="rule">
+    <ul>
+      <li>
+        -遊び方-
+      </li>
+      <li>①Map上をクリックします。</li>
+      <li>②Wairokuさんが出現しますので、更にクリックします。</li>
+      <li>(一度出現したWairokuさんは自動的にセーブされます。) </li>
+      <li>③Street viewモードになるのでWairokuさんを探してください。</li>
+    </ul>
+  </div>
+  <div id="map"></div>
+  <div id="floating-panel">
+    <input type="button" value="Mapへ戻る" onclick="toggleStreetView();">
+  </div>
+
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+  <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB4YpCaCehWdLyeUaDMT0Vm1E0KQ_W4_Lo&callback=initialize">
+  </script>
+  <script src="https://www.gstatic.com/firebasejs/5.4.0/firebase.js"></script>
+  <script>
+
+    var config = {
+      apiKey: "AIzaSyC6sCgcbMu6zdZgcuykcEOJe4CMmBSoXxU",
+      authDomain: "chatapp-483eb.firebaseapp.com",
+      databaseURL: "https://chatapp-483eb.firebaseio.com",
+      projectId: "chatapp-483eb",
+      storageBucket: "chatapp-483eb.appspot.com",
+      messagingSenderId: "620661619213"
+    };
+
+    firebase.initializeApp(config);
+    var newPostRef = firebase.database().ref();
+
+    var database = firebase.database();
+    var dataRef = database.ref();
+
+    var panorama;
+    var marker;
+
+
+    $('#link').on('click', function () {
+      window.location.href = 'wairoku_canvas.html';
+    });
+    function initialize() {
+      var bepapo = { lat: 33.590344, lng: 130.3960143 };
+      var map = new google.maps.Map(document.getElementById('map'), {
+        center: bepapo,
+        zoom: 13,
+        streetViewControl: false
+      });
+
+
+      panorama = map.getStreetView();
+      panorama.setPov(/** @type {google.maps.StreetViewPov} */({
+        heading: 0,
+        pitch: 0
+      }));
+
+      dataRef.once("value")
+        .then(function (snapshot) {
+          // console.log(snapshot.val());
+          var obj = snapshot.val();
+          for (let k in obj) {
+            // console.log(obj[k]);
+            // console.log(obj[k].lat);
+            // console.log(obj[k].lon);
+
+            // addMarker({ lat: obj[k].lat, lng: obj[k].lon }, map);
+            marker = new google.maps.Marker({
+              position: { lat: obj[k].lat, lng: obj[k].lon },
+              icon: 'img/wairoku_pose01_10.png',
+              map: map
+            });
+
+            marker.addListener('click', function (event) {
+              $('#floating-panel').show();
+              marker.setIcon('img/wairoku_pose01_20.png');
+              // console.log(event.latLng.lat());
+              // console.log(event.latLng.lng());
+              // panorama.setPosition(event.latLng);
+              panorama.setPosition({ lat: event.latLng.lat() + 0.000001, lng: event.latLng.lng() + 0.000001 });
+              panorama.setVisible(true);
+
+            });
+
+          }
+        });
+
+
+
+
+
+      // This event listener calls addMarker() when the map is clicked.
+      google.maps.event.addListener(map, 'click', function (event) {
+        addMarker(event.latLng, map);
+        map.panTo(event.latLng);
+        // console.log(event.latLng.lat());
+      });
+
+    }
+
+    function toggleStreetView() {
+      var toggle = panorama.getVisible();
+      $('#floating-panel').hide();
+      if (toggle == false) {
+        panorama.setVisible(true);  //streetviewへ切り替え
+        marker.setIcon('img/wairoku_pose01_20.png');
+
+      } else {
+        panorama.setVisible(false); //mapへの切り替え
+        marker.setIcon('img/wairoku_pose01_10.png');
+      }
+    }
+
+    // Adds a marker to the map.
+    function addMarker(location, map) {
+      newPostRef.push({
+        lat: location.lat(),
+        lon: location.lng()
+      });
+
+      marker = new google.maps.Marker({
+        position: location,
+        icon: 'img/wairoku_pose01_10.png',
+        map: map
+      });
+
+      marker.addListener('click', function (event) {
+        $('#floating-panel').show();
+        marker.setIcon('img/wairoku_pose01_20.png');
+        // console.log(event.latLng.lat());
+        // console.log(event.latLng.lng());
+        // panorama.setPosition(event.latLng);
+        panorama.setPosition({ lat: event.latLng.lat() + 0.00001, lng: event.latLng.lng() + 0.00001 });
+        panorama.setVisible(true);
+
+      });
+    }
+
+
+  </script>
+
+
+</body>
+
+</html>
